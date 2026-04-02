@@ -6,6 +6,8 @@ import ij.ImagePlus;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Main dialog window for MetaEdit. Provides the metadata tree view
@@ -15,7 +17,8 @@ public class MetaEditDialog extends JFrame {
 
 	private final ImagePlus imp;
 	private final MetadataNode root;
-	private MetadataTreePanel treePanel;
+	private final List<MetadataTreePanel> treePanels = new ArrayList<>();
+	private JTabbedPane tabbedPane;
 
 	private JToggleButton editToggle;
 	private JButton saveButton;
@@ -42,9 +45,14 @@ public class MetaEditDialog extends JFrame {
 		headerPanel.add(titleLabel);
 		add(headerPanel, BorderLayout.NORTH);
 
-		// -- Metadata tree --
-		treePanel = new MetadataTreePanel(root);
-		add(treePanel, BorderLayout.CENTER);
+		// -- Tabbed metadata panels --
+		tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+		for (MetadataNode category : root.getChildren()) {
+			MetadataTreePanel panel = new MetadataTreePanel(category);
+			treePanels.add(panel);
+			tabbedPane.addTab(category.getName(), panel);
+		}
+		add(tabbedPane, BorderLayout.CENTER);
 
 		// -- Button panel --
 		JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -80,7 +88,9 @@ public class MetaEditDialog extends JFrame {
 
 	private void onToggleEdit(ActionEvent e) {
 		boolean editing = editToggle.isSelected();
-		treePanel.setEditMode(editing);
+		for (MetadataTreePanel panel : treePanels) {
+			panel.setEditMode(editing);
+		}
 		editToggle.setText(editing ? "Disable Editing" : "Enable Editing");
 		saveButton.setEnabled(editing);
 		revertButton.setEnabled(editing);
@@ -96,7 +106,9 @@ public class MetaEditDialog extends JFrame {
 		);
 		if (choice == JOptionPane.YES_OPTION) {
 			root.revertAll();
-			treePanel.refresh();
+			for (MetadataTreePanel panel : treePanels) {
+				panel.refresh();
+			}
 			updateStatus();
 		}
 	}
@@ -120,7 +132,9 @@ public class MetaEditDialog extends JFrame {
 		String savedPath = writer.save(imp, root);
 
 		root.acceptAll();
-		treePanel.refresh();
+		for (MetadataTreePanel panel : treePanels) {
+			panel.refresh();
+		}
 
 		if (savedPath != null) {
 			statusLabel.setText("Applied & saved: " + savedPath);
